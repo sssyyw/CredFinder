@@ -1,0 +1,86 @@
+package com.anrl.micandroid;
+//Author Wesley Ellis; wesleyjellis@gmail.com
+
+import com.anrl.micandroid.UI.MainUI;
+import com.anrl.micandroid.bluetooth.ListenService;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
+import android.content.Intent;
+import android.os.IBinder;
+import android.util.Log;
+
+public class LocalService extends Service {
+
+	private static final String TAG = "micandroid";
+	private static final int notification_ID = 41;
+	
+	private ListenService ourThread = null;
+	private NotificationManager noti;
+
+	@Override
+	public IBinder onBind(Intent arg0) {
+		return null;
+	}
+
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		Log.d(TAG, "++BEGIN SERVICE++");
+		//This starts the service properly
+		super.onStart(intent, startId);
+		start();
+		//Required to return if we want our service to stay alive
+		return START_STICKY;
+	}
+
+	@Override
+	public void onDestroy() {
+		kill();
+		super.onDestroy();
+	}
+
+	private void start() {
+		if(ourThread == null){
+			//Put up a notification
+			notifier();
+			//Get the bluetooth adapter
+			BluetoothAdapter mBluetoothAdapter = BluetoothAdapter
+			.getDefaultAdapter();
+			ourThread = new ListenService();
+			//Start the thread
+			ourThread.startListen(mBluetoothAdapter, getApplicationContext());
+		}
+
+	}
+	
+	private void kill(){
+		if (ourThread != null) {
+			ourThread.stopListen();
+		}
+		cancelnotify();
+	}
+
+	private void notifier() {
+		noti = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+		//Message to display
+		CharSequence text = "Micandroid is listening";
+		
+		Notification notification = new Notification(R.drawable.icon36, text, 0);
+		//Set the notfication to appear as ongoing
+		notification.flags |= Notification.FLAG_ONGOING_EVENT;
+		//Setup the activity that will be launched when the notification is pressed
+		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+				new Intent(this, MainUI.class), 0);
+		
+		notification.setLatestEventInfo(this, TAG, text, contentIntent);
+		noti.notify(notification_ID, notification);
+	}
+
+	private void cancelnotify() {
+		noti = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+		noti.cancelAll();
+	}
+
+}

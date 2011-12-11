@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent" android:layout_height="fill_parent"
+	android:orientation="vertical">
+
+	<TextView android:text="@string/error" android:layout_width="fill_parent"
+		android:layout_height="wrap_content" android:layout_weight="1"
+		android:gravity="center" android:textSize="30dip"></TextView>
+	<TextView android:text="" android:id="@+id/ErrorDetails"
+		android:layout_width="fill_parent" android:layout_height="wrap_content"
+		android:textSize="20dip" android:gravity="center"
+		android:paddingBottom="40dip"></TextView>
+	<LinearLayout android:orientation="horizontal"
+		android:layout_width="fill_parent" android:layout_height="wrap_content">
+		<Button android:id="@+id/cancel6" android:layout_width="fill_parent"
+			android:layout_height="wrap_content" android:text="@string/Cancel"
+			android:layout_weight="1" />
+		<Button android:id="@+id/retry" android:layout_width="fill_parent"
+			android:layout_height="wrap_content" android:layout_weight="1"
+			android:text="@string/retry" />
+	</LinearLayout>
+
+</LinearLayout>

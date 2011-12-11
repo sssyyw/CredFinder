@@ -1,0 +1,214 @@
+package com.anrl.micandroid.netcomm;
+//Author Wesley Ellis; wesleyjellis@gmail.com
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import com.anrl.micandroid.Messages;
+import com.anrl.micandroid.crypto.DHKey;
+
+import android.content.Context;
+import android.os.Handler;
+import android.util.Log;
+
+public class NetComm {
+
+	// Debuggery
+	private final static String TAG = "micandroid";
+
+	// NET Stuffs
+	private final static int PORT = 1388;
+	private final static String ADDRESS = "anrl.selfip.com";
+	protected Socket socket = null;
+	protected PrintWriter out = null;
+	protected BufferedReader in = null;
+
+	// Other
+	protected Handler mHandler;
+
+	protected DHKey ourKey = new DHKey();
+
+	protected String mode_string = "Not_set";
+	protected String first_message = "Not_Set";
+	
+	protected static final String HEADER = "[START]";
+	protected static final String FOOTER = "[END]";
+	protected static final String TILDE = "~";
+	protected static final String AT = "@";
+	protected static final String COLON = ":";
+	protected static final String COMMA = ",";
+	protected static final String ANDROID = "ANDROID";
+	
+	private static final String DH_START = "DHSTART";
+	private static final String DH_REPLY = "DHREPLY";
+	private static final String DH_SUCCESS = "DHSUCCESS";
+
+
+	protected static final boolean ENCRYPT = true;
+	protected static final boolean NO_ENCRYPT = false;
+	protected static final boolean DECRYPT = true;
+	protected static final boolean NO_DECRYPT = false;
+	protected static final boolean THROW_ERROR = true;
+	protected static final boolean NO_ERROR = false;
+	
+	public static final int SUCCESS = 1;
+	public static final int ERROR = 2;
+	public static final int LOADING = 3;
+	public static final int DONE = 4;
+	
+	public class ARGS{
+		public static final int CRYPTO = 1;
+		public static final int LOGIN = 2;
+		public static final int BLUETOOTH = 3;
+		public static final int GENERAL = 4;
+		public static final int SERVER_UNREACHABLE = 5;
+		public static final int IP_BLOCKED = 6;
+	}
+	
+	protected Context mContext = null;
+	
+	public NetComm(Handler tmpHandler, Context context) {
+		mHandler = tmpHandler;
+		mContext = context;
+	}
+	
+
+	public void setHandler(Handler handler){
+		//this gets called when we are restoring WizardUI's components.
+		//The mHandler points to a now defunct handler if we don't update it
+		mHandler = handler;
+	}
+
+	public void startConnectThread() {
+		//Begin Connecting to the server!
+		mHandler.obtainMessage(Messages.NETCOMM, LOADING, 0).sendToTarget();
+		connectThread test = new connectThread();
+		test.start();
+	}
+
+	private class connectThread extends Thread {
+		
+		public void run() {
+			Log.d(TAG, "**Commence Server Comm**");
+			try {
+				socket = new Socket(ADDRESS, PORT);
+				//Load in and out as buffered things
+				out = new PrintWriter(socket.getOutputStream(), true);
+				in = new BufferedReader(new InputStreamReader(socket
+						.getInputStream()));
+			} catch (Exception e) {
+				//Change this to catch different kinds of exception at some point
+				Log.d(TAG, "Socket creation failed " + e.toString());
+				mHandler.obtainMessage(Messages.NETCOMM, ERROR, ARGS.SERVER_UNREACHABLE).sendToTarget();
+				return;
+			}
+			Log.d(TAG, "Socket opened");
+			String toWrite = first_message;
+			writeOut(toWrite, NO_ENCRYPT);
+
+			String parsedMessage = readIn(NO_DECRYPT);
+
+			String[] inputs = parsedMessage.split(TILDE);
+			if (!inputs[0].equals(mode_string + DH_START)) {
+				mHandler.obtainMessage(Messages.NETCOMM, ERROR, ARGS.IP_BLOCKED).sendToTarget();
+				endConnectThread(NO_ERROR);
+				return;
+			}
+			//If we have exceed maximum number of login attemps or have been
+			//blacklisted for some reason, let the user know
+			else if(inputs[0].equals("IPFAILED")){
+				//TODO throw a specific type of error
+				Log.d(TAG, "ERROR: WE HAVE BEEN BLOCKED");
+				endConnectThread(THROW_ERROR);
+			}
+			//inputs[1] is the server's base64 encoded public key
+			//initDH returns our public key encoded the same way
+			String pubkey = ourKey.initDH(inputs[1]);
+			if(pubkey.equals("failed")){
+				//Catch an error in init
+				mHandler.obtainMessage(Messages.NETCOMM, ERROR, ARGS.CRYPTO).sendToTarget();
+				endConnectThread(NO_ERROR);
+			}
+			toWrite = mode_string + DH_REPLY + TILDE + pubkey;
+			writeOut(toWrite,NO_ENCRYPT);
+			parsedMessage = readIn(DECRYPT);
+
+			if (!parsedMessage.equals(mode_string + DH_SUCCESS)) {
+				mHandler.obtainMessage(Messages.NETCOMM, ERROR, ARGS.CRYPTO).sendToTarget();
+				endConnectThread(NO_ERROR);
+				return;
+			}
+			mHandler.obtainMessage(Messages.NETCOMM, SUCCESS, ARGS.CRYPTO).sendToTarget();
+
+		}
+		
+	}
+
+	public void endConnectThread(boolean hadError) {
+		//Catch times when we call endConnecThread after we've stopped
+		if(socket == null) return;
+		
+		if(hadError)
+			mHandler.obtainMessage(Messages.NETCOMM, ERROR, ARGS.GENERAL).sendToTarget();
+		mHandler.obtainMessage(Messages.NETCOMM, DONE, 0).sendToTarget();
+		try {
+			in.close();
+			out.flush();
+			out.close();
+			socket.close();
+		} catch (IOException e) {
+			Log.d(TAG, "endConnectThread failed");
+		}
+	}
+
+	protected String readIn(boolean decrypt){
+		String templine = "fail";
+		if(in != null){
+			try {
+				templine = in.readLine();
+			} catch (IOException e) {
+				Log.d(TAG, "IO exception while trying to read in: "
+						+ e.toString());
+				mHandler.obtainMessage(Messages.NETCOMM, ERROR, ARGS.GENERAL).sendToTarget();
+			}
+			if (templine == null) {
+				return "fail";
+			}
+			//Decrypt if we need to.
+			if(decrypt){
+				templine = ourKey.decrypt(templine);
+			}
+			//Make sure we have headers
+			String parsedMessage = templine.replaceAll(
+					"\\[END\\]|\\[START\\]", "");
+			if (parsedMessage.length() == templine.length()) {
+				endConnectThread(THROW_ERROR);
+				return "fail";
+			}
+			templine = parsedMessage;
+
+			Log.d(TAG, "Input was: " + templine);
+		}
+		else{
+			mHandler.obtainMessage(Messages.NETCOMM, ERROR, ARGS.GENERAL).sendToTarget();
+		}
+		return templine;
+	}
+
+	protected void writeOut(String toWrite, boolean encrypt){
+		if(out == null) {
+			mHandler.obtainMessage(Messages.NETCOMM, ERROR, ARGS.GENERAL).sendToTarget();
+			return;
+		}
+		toWrite = HEADER + toWrite + FOOTER;
+		Log.d(TAG, "writing: " + toWrite);
+		if(encrypt){
+			toWrite = ourKey.encrypt(toWrite);
+		}
+		out.println(toWrite);
+
+	}
+	
+}

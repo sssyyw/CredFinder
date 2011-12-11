@@ -1,0 +1,236 @@
+package com.anrl.micandroid.UI;
+//Author Wesley Ellis; wesleyjellis@gmail.com
+
+import java.util.HashSet;
+import java.util.Set;
+import com.anrl.micandroid.MICAdevice;
+import com.anrl.micandroid.Messages;
+import com.anrl.micandroid.R;
+import com.anrl.micandroid.bluetooth.BluetoothMessage;
+import com.anrl.micandroid.bluetooth.HashReq;
+import com.anrl.micandroid.bluetooth.ListReq;
+import com.anrl.micandroid.bluetooth.RegReq;
+import com.anrl.micandroid.bluetooth.UnregReq;
+import android.app.Activity;
+import android.app.Dialog;
+import android.app.ProgressDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import android.view.View;
+import android.view.Window;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+
+//TODO add a clear button from the menu
+//TODO fix the bug where hitting discover too many times causes it to flail
+
+public class MICAUtilUI extends Activity{
+
+	private ArrayAdapter<String> mArrayAdapter;
+	private HashSet<MICAdevice> deviceList = new HashSet<MICAdevice>();
+
+	private static final int LOADING = 1;
+
+	private static final String TAG = "micandroid";
+	private static final String UNREG_GOOD = "\nStatus: unregistered worked";
+	private static final String UNREG_BAD = "\nStatus: unregister didn't work";
+	private static final String REG_GOOD = "\nStatus: registered successfully";
+	private static final String REG_BAD = "\nStatus: did not registered successfully";
+	private static final String HASH_GOOD = "\nStatus:  provided a good hash";
+	private static final String HASH_BAD = "\nStatus: provided a bad hash";
+	private static final String DUMMY_ARRAY = "0/1/2/3/4/5/6/7/8/9/10/11/12/13/14/15";
+	private static final String WTF = "What was that?";
+	
+	
+	protected void onCreate(Bundle savedInstanceState) {
+		//let Activity do most of the hardwork
+		super.onCreate(savedInstanceState);
+		//disable the ugly title bar
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		//Set the layout from res/layout/discover.xml
+		setContentView(R.layout.discover);
+		//Create an array adapter (a dynamic list) of strings with 
+		//res/layout/device_name.xml as the layout for entries
+		mArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
+		//Set the adapter to be the one used by the ListView
+		ListView pairedListView = (ListView) findViewById(R.id.Discoverlist);
+		pairedListView.setAdapter(mArrayAdapter);
+		
+		//Buttons are accessed via their android:id fields in the xml file
+		Button DiscoverButton = (Button) findViewById(R.id.Discoverbutton);
+		Button HashButton = (Button) findViewById(R.id.HashButton);
+		Button RegButton = (Button) findViewById(R.id.RegisterButton);
+		Button UnregButton = (Button) findViewById(R.id.UnregisterButton);
+
+		DiscoverButton.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				listreq();
+			}
+		});
+
+		HashButton.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				hashreq();
+			}
+		});
+
+		UnregButton.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				unreq();
+			}
+		});
+
+		RegButton.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				reg();
+			}
+		});
+
+	}
+	
+	private void listreq(){
+		Log.d(TAG, "Commence listreq");
+		//Construct a set of devices
+		Set<BluetoothDevice> pairedDevices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+		//Pass them to ListReq
+		ListReq.talkTo(mHandler, pairedDevices);
+		//Output is handled by mHandler
+	}
+	private void hashreq(){
+		Log.d(TAG, "Commence Hashing");
+		//Send out hashreqs to everything in our device list
+		HashReq.talkTo(mHandler, deviceList, DUMMY_ARRAY, DUMMY_ARRAY);
+	}
+	private void unreq(){
+		Log.d(TAG, "Commen Unregistering");
+		//Send out UnregReqs to all the devices
+		UnregReq.talkTo(deviceList, mHandler);
+	}
+	private void reg(){
+		mArrayAdapter.clear();
+		Log.d(TAG, "Commence register");
+		//This is really hacky and only works when we don't have unique
+		//data for them
+		for(MICAdevice device: deviceList){
+			RegReq.talkTo(mHandler, device, DUMMY_ARRAY, DUMMY_ARRAY, DUMMY_ARRAY);
+		}
+	}
+	
+	//I'm sorry for the mess of switch statements
+	//but it's saner than keeping track of unique ints for messages
+	//across classes and objects
+	private final Handler mHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			switch (msg.what) {
+			//What kind of message?
+			case Messages.BLUETOOTH:
+				//What type of Bluetooth Message?
+				switch(msg.arg1){
+				case BluetoothMessage.HASH:
+					//What happened?
+					switch(msg.arg2){
+					case BluetoothMessage.ARGS.DONE:
+						dismissDialog(LOADING);
+						break;
+					case BluetoothMessage.ARGS.FAIL:
+						//Hash failed
+						MICAdevice hashfalse = (MICAdevice) msg.obj;
+						mArrayAdapter.add(hashfalse.toString() + HASH_BAD);
+						break;
+					case BluetoothMessage.ARGS.SUCCESS:
+						//Hash worked!
+						MICAdevice hashtrue = (MICAdevice) msg.obj;
+						mArrayAdapter.add(hashtrue.toString() + HASH_GOOD);
+						break;
+					case BluetoothMessage.ARGS.LOADING:
+						//Starting HashReq
+						mArrayAdapter.clear();
+						showDialog(LOADING);
+						break;
+					default:
+						Log.d(TAG, WTF);
+					}
+					break;
+				case BluetoothMessage.LIST:
+					switch(msg.arg2){
+					//what happened with list?
+					case BluetoothMessage.ARGS.DONE:
+						dismissDialog(LOADING);
+						break;
+					case BluetoothMessage.ARGS.FAIL:
+						break;
+					case BluetoothMessage.ARGS.SUCCESS:
+						MICAdevice device = (MICAdevice) msg.obj;
+						deviceList.add(device);
+						mArrayAdapter.add(device.getHost().getName() + "\n" + device.legacyGetAddress());
+						break;
+					case BluetoothMessage.ARGS.LOADING:
+						mArrayAdapter.clear();
+						deviceList.clear();
+						showDialog(LOADING);
+						break;
+					default:
+						Log.d(TAG, WTF);
+					}
+					break;
+				case BluetoothMessage.REG:
+					//What happened with Reg?
+					switch(msg.arg2){
+					case BluetoothMessage.ARGS.SUCCESS:
+						MICAdevice device = (MICAdevice) msg.obj;
+						mArrayAdapter.add(device.toString() + REG_GOOD);
+						break;
+					case BluetoothMessage.ARGS.FAIL:
+						MICAdevice device2 = (MICAdevice) msg.obj;
+						mArrayAdapter.add(device2.toString() + REG_BAD);
+						break;
+					}
+					break;
+				case BluetoothMessage.UNREG:
+					switch(msg.arg2){
+					case BluetoothMessage.ARGS.DONE:
+						dismissDialog(LOADING);
+						break;
+					case BluetoothMessage.ARGS.FAIL:
+						MICAdevice unregfalse = (MICAdevice) msg.obj;
+						mArrayAdapter.add(unregfalse.toString() + UNREG_BAD);
+					case BluetoothMessage.ARGS.SUCCESS:
+						MICAdevice unregtrue = (MICAdevice) msg.obj;
+						mArrayAdapter.add(unregtrue.toString() + UNREG_GOOD);
+						break;
+					case BluetoothMessage.ARGS.LOADING:
+						mArrayAdapter.clear();
+						showDialog(LOADING);
+						break;
+					default:
+						Log.d(TAG, WTF);
+					}
+					break;
+				default:
+					Log.d(TAG, WTF);
+				}	
+			}
+		}
+	};
+	
+	//This gets called when we call showDialog
+	//It let's us configure the nature of the dialog
+	//In this case we just want a simple indeterminate length loading box
+	@Override
+	protected Dialog onCreateDialog(int id) {
+		ProgressDialog dialog = new ProgressDialog(this);
+		dialog.setMessage("Loading");
+		//No progress bar, just a spinner
+		dialog.setIndeterminate(true);
+		//Can't be cancelled by pressing back
+		dialog.setCancelable(false);
+		return dialog;
+	}
+
+}

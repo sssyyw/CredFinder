@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical" android:layout_width="fill_parent"
+	android:layout_height="fill_parent">
+	<!-- This table layout is so that we can the 4 buttons arranged in a square -->
+	<TableLayout android:orientation="vertical"
+		android:layout_height="wrap_content" android:layout_width="wrap_content"
+		android:stretchColumns="*">
+		<TableRow>
+			<Button android:id="@+id/Discoverbutton" android:text="@string/discoverbutton"
+				android:layout_width="fill_parent" android:layout_height="wrap_content"></Button>
+
+			<Button android:layout_width="fill_parent"
+				android:layout_height="wrap_content" android:text="@string/hashReq"
+				android:id="@+id/HashButton"></Button>
+		</TableRow>
+		<TableRow>
+			<Button android:layout_width="fill_parent"
+				android:layout_height="wrap_content" android:id="@+id/RegisterButton"
+				android:text="@string/regReg"></Button>
+
+			<Button android:layout_width="fill_parent"
+				android:layout_height="wrap_content" android:text="@string/unregReq"
+				android:id="@+id/UnregisterButton"></Button>
+		</TableRow>
+	</TableLayout>
+	<ListView android:id="@+id/Discoverlist" android:layout_width="fill_parent"
+		android:layout_height="fill_parent"></ListView>
+
+</LinearLayout>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent" android:layout_height="fill_parent"
+	android:orientation="vertical">
+	<Button android:id="@+id/discoverwizard" android:layout_width="fill_parent"
+		android:layout_height="wrap_content" android:text="Discover"
+		android:layout_marginTop="20dip" />
+	<ListView android:layout_height="wrap_content"
+		android:layout_width="wrap_content" android:id="@+id/ListView01"
+		android:layout_above="@+id/LinearLayout01" android:layout_weight="1"></ListView>
+	<TextView android:id="@+id/EmptyListView" android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="Press Discover to find some devices"></TextView>
+
+	<LinearLayout android:orientation="horizontal"
+		android:layout_width="fill_parent" android:layout_height="wrap_content">
+
+		<Button android:id="@+id/cancel3" android:layout_width="fill_parent"
+			android:layout_height="wrap_content" android:text="@string/Cancel"
+			android:layout_weight="1" />
+		<Button android:id="@+id/back3" android:layout_width="fill_parent"
+			android:layout_height="wrap_content" android:text="@string/Back"
+			android:layout_weight="1" />
+		<Button android:id="@+id/next3" android:layout_width="fill_parent"
+			android:layout_height="wrap_content" android:layout_weight="1"
+			android:text="@string/Next" />
+
+	</LinearLayout>
+</LinearLayout>

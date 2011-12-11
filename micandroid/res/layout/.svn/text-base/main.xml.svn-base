@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--  This scroll view is so that if we don't have enough screen space it can scroll -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent" android:layout_height="fill_parent"
+	android:fillViewport="true" android:isScrollContainer="true">
+	<LinearLayout android:orientation="vertical"
+		android:layout_width="fill_parent" android:layout_height="fill_parent">
+		<LinearLayout android:layout_width="wrap_content"
+			android:layout_height="wrap_content" android:layout_gravity="center"
+			android:orientation="horizontal" android:paddingTop="20dip"
+			android:paddingBottom="30dip">
+			<ToggleButton android:id="@+id/ToggleService"
+				android:layout_height="wrap_content" android:textOff="Service Off"
+				android:textOn="Service On" android:layout_width="wrap_content"
+				android:layout_gravity="center_horizontal"
+				android:layout_marginRight="20dip" android:minWidth="100dip"></ToggleButton>
+			<CheckBox android:layout_width="wrap_content"
+				android:layout_height="wrap_content" android:id="@+id/Discoverable"
+				android:text="@string/Visable"></CheckBox>
+		</LinearLayout>
+		
+	<!--  This nested linear layout is so that we can make 4 square buttons -->
+
+		<LinearLayout android:layout_width="wrap_content"
+			android:layout_height="wrap_content" orientation="hortizontal"
+			android:layout_gravity="center">
+			<Button android:text="Authenticate" android:id="@+id/Auth"
+				android:layout_width="wrap_content" android:layout_height="wrap_content"
+				android:minWidth="120dip" android:minHeight="120dip"></Button>
+
+			<Button android:text="MICA utility" android:id="@+id/MICAutility"
+				android:layout_width="wrap_content" android:layout_height="wrap_content"
+				android:minWidth="120dip" android:minHeight="120dip"></Button>
+		</LinearLayout>
+		<LinearLayout android:layout_width="wrap_content"
+			android:layout_height="wrap_content" orientation="hortizontal"
+			android:layout_gravity="center">
+			<Button android:text="Setup Cloud" android:id="@+id/SetupCloud"
+				android:layout_width="wrap_content" android:layout_height="wrap_content"
+				android:minWidth="120dip" android:minHeight="120dip"></Button>
+			<Button android:text="Dissolve Cloud" android:id="@+id/DissolveCloud"
+				android:layout_width="wrap_content" android:layout_height="wrap_content"
+				android:minWidth="120dip" android:minHeight="120dip"></Button>
+		</LinearLayout>
+		
+	</LinearLayout>
+</ScrollView>

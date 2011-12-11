@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">CredFinder</string>
+	<string name="Auth">Authenticate</string>
+	<string name="Back">Back</string>
+	<string name="Cancel">Cancel</string>
+	<string name="discoverbutton">Discover</string>
+	<string name="done">Done</string>
+	<string name="error">Whoops...\nSomething went wrong\nPlease Try Again</string>
+	<string name="finish">Finish</string>
+	<string name="hashReq">Hash Secrets</string>
+	<string name="micaLogin">Please enter your username and password</string>
+	<string name="Next">Next</string>
+	<string name="Pass">Password</string>
+	<string name="regReg">Register Devices</string>
+	<string name="retry">Retry</string>
+	<string name="success">Congratulations!\nYou can now Ping with your friends!</string>
+	<string name="Visable">Visable?</string>
+	<string name="unregReq">Unregister Devices</string>
+	<string name="upLogin">Please enter the username and password for the service</string>
+	<string name="User">Username</string>
+	<string name="Wizard">Start Wizard</string>
+	<string name="WizardBegin">It\'s time to register to server!\nPress next to begin</string>
+	<!--  BluetoothChat -->
+    <string name="send">Send</string>
+    <string name="not_connected">You are not connected to a device</string>
+    <string name="bt_not_enabled_leaving">Bluetooth was not enabled. Leaving Bluetooth Chat.</string>
+    <string name="title_connecting">connecting...</string>
+    <string name="title_connected_to">connected: </string>
+    <string name="title_not_connected">not connected</string>
+
+    <!--  DeviceListActivity -->
+    <string name="scanning">scanning for devices...</string>
+    <string name="select_device">select a device to connect</string>
+    <string name="none_paired">No devices have been paired</string>
+    <string name="none_found">No devices found</string>
+    <string name="title_paired_devices">Paired Devices</string>
+    <string name="title_other_devices">Other Available Devices</string>
+    <string name="button_scan">Scan for devices</string>
+
+    <!-- Options Menu -->
+    <string name="connect">Connect a device</string>
+    <string name="discoverable">Make discoverable</string>
+</resources>

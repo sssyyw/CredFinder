@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+<item android:checkable="true" android:enabled="true" android:visible="true" android:id="@+id/BeginWizard" android:title="Setup Cloud"></item>
+<item android:id="@+id/Dissolve" android:title="Dissolve Cloud"></item>
+<item android:id="@+id/BTMenu" android:title="MICA utility"></item>
+<item android:title="Unregister Device" android:id="@+id/UnReg"></item>
+<item android:id="@+id/TEST" android:title="TEST"></item>
+</menu>

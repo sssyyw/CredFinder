@@ -1,0 +1,305 @@
+package com.anrl.micandroid.netcomm;
+//Author Wesley Ellis; wesleyjellis@gmail.com
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import com.anrl.micandroid.MICAdevice;
+import com.anrl.micandroid.Messages;
+import com.anrl.micandroid.bluetooth.BluetoothMessage;
+import com.anrl.micandroid.bluetooth.HashReq;
+import com.anrl.micandroid.bluetooth.ListReq;
+import com.anrl.micandroid.crypto.AES;
+import com.anrl.micandroid.crypto.Base64;
+import com.anrl.micandroid.crypto.Registration;
+import com.anrl.micandroid.crypto.Secrets;
+import com.anrl.micandroid.crypto.Util;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.Context;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import android.util.TimingLogger;
+
+public class Auth extends NetComm{
+
+	//Handler that we will pass message back up to
+	private Handler externHandler;
+	private Registration regState;
+	private HashSet<MICAdevice> foundDevices;
+	private LinkedHashSet<MICAdevice> tryHashDevices;
+	private LinkedHashSet<MICAdevice> workedHashDevices;
+	private HashSet<BluetoothDevice> toTest;
+	private String mHash = "";
+	private String ourSelf;
+
+	public static final int SUCCESS = 1;
+	public static final int ERROR = 2;
+
+	public class ARGS{
+		public static final int NOT_REGISTERED = 1;
+		public static final int SERVER_UNREACHABLE = 2;
+		public static final int CRYPTO_ERROR = 3;
+		public static final int HASH_FAILED = 4;
+		public static final int GENERAL_ERROR = 5;
+	}
+
+	private static final String TAG = "micandroid";
+	private static final String AUTHREQ = "AUTHREQ";
+	private static final String AUTH_HASH = "AUTHHASH";
+	private static final String AUTH_DEVICES = "AUTHDEVICES";
+	private static final String AUTH_REPLY = "AUTHREPLY";
+	private static final String AUTH_SUCCESS = "AUTHSUCCESS";
+	//TODO get this working!
+	TimingLogger timer = null;
+
+	public Auth(Handler tmpHandler, Context context) {
+		//call the netcomm constructor
+		//not passing ourHandler here because then it would have to be static
+		super(null, context);
+		if(Log.isLoggable(TAG, Log.ERROR)){
+			Log.d(TAG, "yay, we can log?");
+		}
+		timer = new TimingLogger(TAG, "AUTH");
+		
+		//Set the handler here
+		super.setHandler(ourHandler);
+		//Mode string is a protected field from NetComm
+		mode_string = "AUTH";
+		//TODO enable the name@host@address interface on the server
+		//ourSelf = "ANDROID" + "@" + "ANDROID" + "@" + mBluetoothAdapter.getAddress().replaceAll(":", "");
+		//Create our address
+		ourSelf = ANDROID + AT +  BluetoothAdapter.getDefaultAdapter().getAddress().replaceAll(COLON, "");
+		first_message = AUTHREQ + TILDE + ourSelf;
+		externHandler = tmpHandler;
+	}
+
+	public void authenticate(){
+		authThread begin = new authThread();
+		begin.start();
+	}
+	private class authThread extends Thread{
+
+		//This is here because mContext.getMainLooper().prepare() is considered unused...
+		@SuppressWarnings("static-access")
+		public void run(){
+
+			Log.d(TAG, "**Authentication Starting**");
+			timer.addSplit("to Begining of thread");
+			foundDevices = new HashSet<MICAdevice>();
+			toTest = new HashSet<BluetoothDevice>();
+			tryHashDevices = new LinkedHashSet<MICAdevice>();
+			workedHashDevices = new LinkedHashSet<MICAdevice>();
+
+			//I have not a sweet clue why on earth I'm calling this, but it crashes if I don't
+			mContext.getMainLooper().prepare();
+
+			regState = Registration.getRegistration(mContext);
+			if(!regState.isRegistered()){
+				//send a message and end if we are not registered
+				externHandler.obtainMessage(Messages.AUTH, 
+						ERROR, ARGS.NOT_REGISTERED).sendToTarget();
+				return;
+			}
+			//Send ListReqs to all previously bonded devices
+			toTest.addAll( BluetoothAdapter.getDefaultAdapter().getBondedDevices());
+			ListReq.talkTo(ourHandler, toTest);
+			timer.addSplit("launching listreq");
+		}
+	}
+
+
+	//Check out  ourHandler to see when this is called
+	private void sendDevices(){
+		sendDeviceThread deviceThread = new sendDeviceThread();
+		deviceThread.start();
+	}
+	
+	private class sendDeviceThread extends Thread{
+		
+		public void run(){
+			timer.addSplit("Begin sendDeviceThread");
+			String toSend = "";
+			//Creates a list of devices that we got listReqs from
+			for(MICAdevice device : foundDevices){
+				toSend = device.legacyGetAddress() + COMMA + toSend;
+			}
+			toSend = toSend + ourSelf;
+			toSend = toSend + TILDE + regState.getClientKey();
+			writeOut(AUTH_DEVICES + TILDE + toSend, ENCRYPT);
+
+			String result = readIn(DECRYPT);
+			String[] parts = result.split(TILDE);
+			if(!parts[0].equals(AUTH_REPLY) || parts.length != 4){
+				endConnectThread(THROW_ERROR);
+				return;
+			}
+			//parts[0] = header
+			//parts[1] = nonce
+			//parts[2] = device list
+			//parts[3] = server cloud key
+			String nonce = parts[1];
+			String servercloudkey = parts[3];
+
+			String[] devices = parts[2].split(COMMA);
+			for(int i = 0; i < devices.length -1; i++){
+				for(MICAdevice device : foundDevices){
+					//This is an awful search, but I'm a lazy S.O.B
+
+					String name = device.legacyGetAddress();
+					if(devices[i].equals(name)){
+						tryHashDevices.add(device);
+					}
+				}
+			}
+			//Create our hash message
+			mHash = Secrets.getHashMessage(nonce, servercloudkey, regState);
+			//Commence the HashReq thread
+			HashReq.talkTo(ourHandler, tryHashDevices, nonce, servercloudkey);
+			timer.addSplit("HashReq begins");
+			timer.dumpToLog();
+		}
+	}
+
+
+
+	//Called when HashReq sends a finished message to the handler
+	private void combineHashes(){
+		combineHashThread hashThread = new combineHashThread();
+		hashThread.start();
+	}
+	
+	private class combineHashThread extends Thread{
+		public void run(){
+			timer.addSplit("combineHash thread begins");
+			String toSend = "";
+			for(MICAdevice device : workedHashDevices){
+				toSend = device.legacyGetAddress() + COLON + device.getHashVal() + COMMA + toSend;
+			}
+			toSend = toSend + ourSelf + COLON + mHash;
+			writeOut(AUTH_HASH + TILDE + toSend, ENCRYPT);
+
+			String response = readIn(DECRYPT);
+			String[] pieces = response.split(TILDE);
+			if(!pieces[0].equals(AUTH_SUCCESS) || pieces.length != 2){
+				//TODO Write code to throw a different error when auth fails
+
+				endConnectThread(THROW_ERROR);
+				return;
+			}
+			else{
+				//We are authenticated!
+				String[] subpieces = pieces[1].split(COMMA);
+				//Retrieve the UPKey
+				byte[] key = Util.makeBytesfromString(regState.getUPKey());
+				byte[] encuser = null;
+				byte[] encpass = null;
+				try {
+					encuser = Base64.decode(subpieces[0]);
+					encpass = Base64.decode(subpieces[1]);
+				} catch (IOException e) {
+					Log.d(TAG, "IO exception");
+					externHandler.obtainMessage(Messages.AUTH, ERROR, 0).sendToTarget();
+					return;
+				}
+				//Decrypt the Username and password
+				byte[] user = AES.decryptByte(encuser, key);
+				byte[] pass = AES.decryptByte(encpass, key);
+				String username = new String(user);
+				String password = new String(pass);
+				//Pass back the username and password
+				externHandler.obtainMessage(Messages.AUTH, SUCCESS, 0, username + " : " + password).sendToTarget();
+				
+				timer.addSplit("END OF LINE");
+				timer.dumpToLog();
+				endConnectThread(NO_ERROR);
+				
+			}
+		}
+	}
+
+	//Handler for messages from NetComm, ListReq and HashReq
+	private final Handler ourHandler = new Handler() {
+		//I'm really sorry about the 3 time nested switch statements
+		//But it's much saner than having unique ints for every message
+		@Override
+		public void handleMessage(Message msg) {
+			//msg.what identifies the class of message
+			switch (msg.what){
+			//It's bluetoothMessage related
+			case Messages.BLUETOOTH:
+				switch(msg.arg1){
+				//What kind of BT message?
+				case BluetoothMessage.HASH:
+					switch(msg.arg2){
+					//What kind of Hash Message?
+					case BluetoothMessage.ARGS.SUCCESS:
+						//Got a successful hash from one of our devices, add it to workedHashDevices
+						MICAdevice device = (MICAdevice) msg.obj;
+						workedHashDevices.add(device);
+						break;
+					case BluetoothMessage.ARGS.FAIL:
+						//If one of the devices fails to provide a hash, tell the user
+						externHandler.obtainMessage(Messages.AUTH, ERROR, ARGS.HASH_FAILED).sendToTarget();
+						//Disconnect the server
+						endConnectThread(NO_ERROR);
+						break;
+					case BluetoothMessage.ARGS.DONE:
+						//Check to see if we haven't disconnected from the server
+						if(socket != null){
+							combineHashes();
+						}
+						break;
+					}
+					break;
+				case BluetoothMessage.LIST:
+					//What kind of LIST message?
+					switch(msg.arg2){
+					case BluetoothMessage.ARGS.SUCCESS:
+						//Found a device!
+						foundDevices.add((MICAdevice) msg.obj);
+						Log.d(TAG, "MICAdevice found!");
+						break;
+					case BluetoothMessage.ARGS.DONE:
+						//All done discovering devices
+						//this method is from NetComm, it will connect to the server and setup a secure tunnel
+						startConnectThread();
+						break;
+					}
+					break;
+				}
+				break;
+			case Messages.NETCOMM:
+				//What kind of netcomm message?
+				switch(msg.arg1){
+				case NetComm.SUCCESS:
+					//There's only one case of success here
+					sendDevices();
+					break;
+				case NetComm.ERROR:
+					//What kind of error?
+					switch(msg.arg2){
+					case NetComm.ARGS.SERVER_UNREACHABLE:
+						externHandler.obtainMessage(Messages.AUTH, ERROR, ARGS.SERVER_UNREACHABLE).sendToTarget();
+						break;
+					case NetComm.ARGS.CRYPTO:
+						externHandler.obtainMessage(Messages.AUTH, ERROR, ARGS.CRYPTO_ERROR).sendToTarget();
+						break;
+					case NetComm.ARGS.IP_BLOCKED:
+						//TODO maybe implement something here?
+					case NetComm.ARGS.GENERAL:
+						externHandler.obtainMessage(Messages.AUTH, ERROR, ARGS.GENERAL_ERROR).sendToTarget();
+						break;
+					}
+					break;
+				case NetComm.DONE:
+					Log.d(TAG, "socket closed");
+				}
+				break;
+			}
+		}
+	};
+
+	
+}

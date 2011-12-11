@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/idman/!svn/ver/257/micandroid/src/com/anrl/micandroid/crypto
+END
+Random.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/idman/!svn/ver/256/micandroid/src/com/anrl/micandroid/crypto/Random.java
+END
+Base64.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/idman/!svn/ver/256/micandroid/src/com/anrl/micandroid/crypto/Base64.java
+END
+DHKey.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/idman/!svn/ver/256/micandroid/src/com/anrl/micandroid/crypto/DHKey.java
+END
+AES.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/idman/!svn/ver/256/micandroid/src/com/anrl/micandroid/crypto/AES.java
+END
+Secrets.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/idman/!svn/ver/257/micandroid/src/com/anrl/micandroid/crypto/Secrets.java
+END
+MD5hash.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/idman/!svn/ver/256/micandroid/src/com/anrl/micandroid/crypto/MD5hash.java
+END
+Registration.java
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/idman/!svn/ver/256/micandroid/src/com/anrl/micandroid/crypto/Registration.java
+END
+Util.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/idman/!svn/ver/256/micandroid/src/com/anrl/micandroid/crypto/Util.java
+END

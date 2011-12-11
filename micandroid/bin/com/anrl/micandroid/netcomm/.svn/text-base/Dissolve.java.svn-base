@@ -1,0 +1,17 @@
+package com.anrl.micandroid.netcomm;
+//Author Wesley Ellis; wesleyjellis@gmail.com
+
+import android.content.Context;
+import android.os.Handler;
+
+public class Dissolve extends NetComm {
+
+	public Dissolve(Handler tmpHandler, Context context) {
+		super(tmpHandler, context);
+		// TODO fix first_message
+		mode_string = "DISSOLVE";
+	}
+	
+	
+	
+}

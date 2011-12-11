@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">MICAndroid</string>
+	<string name="Auth">Authenticate</string>
+	<string name="Back">Back</string>
+	<string name="Cancel">Cancel</string>
+	<string name="discoverbutton">Discover</string>
+	<string name="done">Done</string>
+	<string name="error">Whoops...\nSomething went wrong\nPlease Try Again</string>
+	<string name="finish">Finish</string>
+	<string name="hashReq">Hash Secrets</string>
+	<string name="micaLogin">Please enter your MICA username and password</string>
+	<string name="Next">Next</string>
+	<string name="Pass">Password</string>
+	<string name="regReg">Register Devices</string>
+	<string name="retry">Retry</string>
+	<string name="success">Congratulations!\nYou can now be implicitly authorized</string>
+	<string name="Visable">Visable?</string>
+	<string name="unregReq">Unregister Devices</string>
+	<string name="upLogin">Please enter the username and password for the service you wish to be implicitly authorize on</string>
+	<string name="User">Username</string>
+	<string name="Wizard">Start Wizard</string>
+	<string name="WizardBegin">It\'s time to setup a MICA cloud!\nPress next to begin</string>
+</resources>
